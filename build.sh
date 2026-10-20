@@ -15,7 +15,7 @@ fi
 
 
 echo "Testing if javac works..."
-$JAVAC -version
+"$JAVAC" -version
 echo "...success"
 
 mkdir -p build
@@ -29,7 +29,7 @@ public class Test {
 	}
 }
 EOF
-$JAVAC -source 1.3 -target 1.3 Test.java
+"$JAVAC" -source 1.3 -target 1.3 Test.java
 echo "...success"
 
 if [[ ! -f main.tar.gz ]]
@@ -53,7 +53,7 @@ then
 fi
 
 echo "Compiling source"
-$JAVAC `find ../src -name '*'.java` -d class -source 1.3 -target 1.3 -bootclasspath $BOOTCLASSPATH
+"$JAVAC" `find ../src -name '*'.java` -d class -source 1.3 -target 1.3 -bootclasspath $BOOTCLASSPATH
 echo "Packing to JAR"
 "$JAVA_HOME/bin/jar" cvfm starfaitme-unobfuscated.jar ../META-INF/MANIFEST.MF -C class . -C ../res .
 
