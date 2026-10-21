@@ -16,6 +16,12 @@ public class Variable {
     }
 
     public String toString() {
-        return "Variable("+name+","+instanceCount+","+variableId+","+ occurrenceCount +","+firstAddress+")";
+        return "Variable{" +
+            "name='" + name + '\'' +
+            ", instanceCount=" + instanceCount +
+            ", variableId=" + variableId +
+            ", occurrenceCount=" + occurrenceCount +
+            ", firstAddress=" + firstAddress +
+            '}';
     }
 }
