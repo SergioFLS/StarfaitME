@@ -23,7 +23,7 @@ public class VARI {
         int localVariables = ls.readInt();
 
         int entriesCount = (chunkSize - (3*4)) / ENTRY_SIZE;
-        variables = new Variable[chunkSize];
+        variables = new Variable[entriesCount];
         System.out.println(entriesCount + " entries in VARI");
         System.out.println(strg.toString());
 
