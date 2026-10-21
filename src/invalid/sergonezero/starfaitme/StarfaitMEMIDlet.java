@@ -5,19 +5,19 @@ import invalid.sergonezero.starfaitme.chunk.STRG;
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Form;
 import javax.microedition.midlet.MIDlet;
+import java.io.ByteArrayInputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Stack;
 
 public class StarfaitMEMIDlet extends MIDlet {
     private static final int ID_FORM = 0x464f524d;
+    private static String message = "no message";
     private static STRG strg = null;
     private static CODE code = null;
 
     protected void startApp() {
-        Form f = new Form("StarfaitME");
-        f.append("Your MIDlet seems to run.");
-        Display.getDisplay(this).setCurrent(f);
         InputStream is = this.getClass().getResourceAsStream("/data.win");
         if (is == null) {
             System.err.println("Could not find resource 'data.win'");
@@ -47,6 +47,77 @@ public class StarfaitMEMIDlet extends MIDlet {
                 d.reset();
                 d.skip(chunkSize);
                 //System.out.println("skipping " + d.skip(chunkSize) + " bytes");
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        interpreter();
+
+        Form f = new Form("StarfaitME");
+        f.append("Message: " + message);
+        Display.getDisplay(this).setCurrent(f);
+    }
+
+    private void interpreter() {
+        if (strg == null) { throw new NullPointerException(); }
+        if (code == null) { throw new NullPointerException(); }
+        byte[] interpretingCode = code.codes[0];
+        ByteArrayInputStream bais = new ByteArrayInputStream(interpretingCode);
+        LittleStream ls = new LittleStream(bais);
+        Stack stack = new Stack();
+
+        try {
+            while (!ls.isEndOfStream()) {
+                int opword = ls.readInt();
+                int opcode = (opword >> 24) & 0xFF;
+                int type1 = (opword >> 16) & 0xFF;
+                short extra = (short)opword;
+
+                System.out.println(
+                    "Opcode: " + Integer.toHexString(opcode)
+                    + ", Type1: " + Integer.toHexString(type1)
+                    + ", Extra: " + extra);
+
+                switch (opcode) {
+                    case 0xC0: { // PUSH
+                        if (type1 != 6)
+                            throw new IllegalStateException("Unknown type1: " + type1);
+
+                        int stringIndex = ls.readInt();
+                        String stringToAdd = strg.strings[stringIndex];
+                        System.out.println("String: " + stringToAdd);
+                        stack.push(stringToAdd);
+                        break;
+                    }
+                    case 0x07: // CONV, no-op for now
+                        break;
+                    case 0xD9: { // CALL
+                        Stack arguments = new Stack();
+
+                        for (int i = 0; i < extra; i++) {
+                            arguments.push(stack.pop());
+                        }
+
+                        // not the real function index, yet
+                        // see note in real TinyGameMakerVM
+                        int functionIndex = ls.readInt();
+
+                        // assuming this is 'show_debug_message'
+                        String arg0 = (String)arguments.firstElement().toString();
+                        System.out.println("Game: " + arg0);
+                        message = arg0;
+
+                        stack.push(null);
+                        break;
+                    }
+                    case 0x9E: { // POPZ
+                        stack.pop();
+                        break;
+                    }
+                    default:
+                        throw new IllegalStateException("Unknown opcode: " + Integer.toHexString(opcode));
+                }
             }
         } catch (IOException e) {
             e.printStackTrace();
