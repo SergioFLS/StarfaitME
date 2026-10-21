@@ -4,18 +4,18 @@ public class Variable {
     String name;
     int instanceCount;
     int variableId;
-    int occurenceCount;
+    int occurrenceCount;
     int firstAddress;
 
-    public Variable(String name, int instanceCount, int variableId, int occurenceCount, int firstAddress) {
+    public Variable(String name, int instanceCount, int variableId, int occurrenceCount, int firstAddress) {
         this.name = name;
         this.instanceCount = instanceCount;
         this.variableId = variableId;
-        this.occurenceCount = occurenceCount;
+        this.occurrenceCount = occurrenceCount;
         this.firstAddress = firstAddress;
     }
 
     public String toString() {
-        return "Variable("+name+","+instanceCount+","+variableId+","+occurenceCount+","+firstAddress+")";
+        return "Variable("+name+","+instanceCount+","+variableId+","+ occurrenceCount +","+firstAddress+")";
     }
 }
