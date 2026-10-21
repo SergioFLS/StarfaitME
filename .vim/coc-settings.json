@@ -1,0 +1,10 @@
+{
+    "java.import.maven.enabled": false,
+    "java.import.gradle.enabled": false,
+    "java.project.sourcePaths": ["src"],
+    "java.project.outputPath": "build/class",
+    "java.project.referencedLibraries": {
+        "include": ["build/lib/*.jar"]
+    },
+    "java.autobuild.enabled": false
+}
