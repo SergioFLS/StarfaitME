@@ -3,6 +3,9 @@ name: Simple build script
 on:
   push:
     branches: [ "main" ]
+    paths:
+        - '**.java'
+        - 'build.sh'
   pull_request:
     branches: [ "main" ]
 
