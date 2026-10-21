@@ -6,7 +6,8 @@ import java.io.DataInputStream;
 import java.io.IOException;
 
 public class STRG {
-    public int[] offsets;
+    public static final int ID = 1196577875;
+    public int[] addresses;
     public String[] strings;
 
     public STRG(DataInputStream d, LittleStream ls) throws IOException {
@@ -14,15 +15,15 @@ public class STRG {
             ls = new LittleStream(d);
         }
 
-        int lenOffsets = ls.readInt();
-        offsets = new int[lenOffsets];
-        strings = new String[lenOffsets];
-        for (int i = 0; i < lenOffsets; i++) {
-            offsets[i] = ls.readInt();
+        int lenAddresses = ls.readInt();
+        addresses = new int[lenAddresses];
+        strings = new String[lenAddresses];
+        for (int i = 0; i < lenAddresses; i++) {
+            addresses[i] = ls.readInt();
         }
 
-        // assuming the offsets are sorted because IDK how to seek here...
-        for (int i = 0; i < lenOffsets; i++) {
+        // assuming the addresses are sorted because IDK how to seek here...
+        for (int i = 0; i < lenAddresses; i++) {
             int stringLength = ls.readInt();
             byte[] rawString = new byte[stringLength];
             StringBuffer buf = new StringBuffer();
@@ -36,14 +37,15 @@ public class STRG {
     }
 
     public int getLength() {
-        return offsets.length;
+        return addresses.length;
     }
 
-    public String getStringFromOffset(int offset) {
+    public String getStringFromAddress(int offset) {
         int index = -1;
-        for (int i = 0; i < offsets.length; i++) {
-            if (offsets[i] == offset) {
+        for (int i = 0; i < addresses.length; i++) {
+            if (addresses[i] == offset) {
                 index = i;
+                break;
             }
         }
 

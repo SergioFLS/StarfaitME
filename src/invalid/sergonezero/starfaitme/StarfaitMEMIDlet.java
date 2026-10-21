@@ -6,18 +6,13 @@ import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Form;
 import javax.microedition.midlet.MIDlet;
 import java.io.DataInputStream;
-import java.io.EOFException;
 import java.io.IOException;
 import java.io.InputStream;
 
 public class StarfaitMEMIDlet extends MIDlet {
     private static final int ID_FORM = 0x464f524d;
-    private static final int ID_GEN8 = 944653639;
-    private static final int ID_OPTN = 1314148431;
-    private static final int ID_LANG = 1196310860;
-    private static final int ID_FONT = 1414418246;
-    private static final int ID_CODE = 1162104643;
-    private static final int ID_STRG = 1196577875;
+    private static STRG strg = null;
+    private static CODE code = null;
 
     protected void startApp() {
         Form f = new Form("StarfaitME");
@@ -31,7 +26,7 @@ public class StarfaitMEMIDlet extends MIDlet {
         DataInputStream d = new DataInputStream(is);
         LittleStream ls = new LittleStream(d);
         try {
-            int rawSize = d.available();
+            int rawFileSize = d.available();
             System.out.println(d.readInt() == ID_FORM);
             int size = ls.readInt();
             System.out.println(size);
@@ -42,11 +37,11 @@ public class StarfaitMEMIDlet extends MIDlet {
                 d.mark(chunkSize);
                 System.out.println(chunkId + " " + chunkSize);
                 switch (chunkId) {
-                    case ID_STRG:
-                        new STRG(d, ls);
+                    case STRG.ID:
+                        strg = new STRG(d, ls);
                         break;
-                    case ID_CODE:
-                        new CODE(rawSize, d, ls);
+                    case CODE.ID:
+                        code = new CODE(rawFileSize, chunkSize, d, ls);
                         break;
                 }
                 d.reset();
