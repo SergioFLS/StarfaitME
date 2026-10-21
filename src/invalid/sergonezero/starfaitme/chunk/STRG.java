@@ -52,4 +52,19 @@ public class STRG {
         if (index == -1) return null;
         return strings[index];
     }
+
+    public String toString() {
+        StringBuffer output = new StringBuffer("STRG[");
+        for (int i = 0; i < addresses.length; i++) {
+           output.append("0x");
+           output.append(Integer.toHexString(addresses[i]));
+           output.append("=");
+           output.append(strings[i]);
+
+           if (i != addresses.length-1)
+               output.append(",");
+        }
+        output.append("]");
+        return output.toString();
+    }
 }
