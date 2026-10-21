@@ -1,6 +1,7 @@
 package invalid.sergonezero.starfaitme;
 import invalid.sergonezero.starfaitme.chunk.CODE;
 import invalid.sergonezero.starfaitme.chunk.STRG;
+import invalid.sergonezero.starfaitme.chunk.VARI;
 
 import javax.microedition.lcdui.Display;
 import javax.microedition.lcdui.Form;
@@ -16,6 +17,7 @@ public class StarfaitMEMIDlet extends MIDlet {
     private static String message = "no message";
     private static STRG strg = null;
     private static CODE code = null;
+    private static VARI vari = null;
 
     protected void startApp() {
         InputStream is = this.getClass().getResourceAsStream("/data.win");
@@ -31,6 +33,24 @@ public class StarfaitMEMIDlet extends MIDlet {
             int size = ls.readInt();
             System.out.println(size);
 
+            // find the STRG chunk first
+            d.mark(size);
+            while (!ls.isEndOfStream() && strg == null) {
+                int chunkId =  ls.readInt();
+                int chunkSize = ls.readInt();
+
+                if (chunkId != STRG.ID) {
+                    d.skip(chunkSize);
+                    continue;
+                }
+
+                strg = new STRG(d, ls);
+            }
+            d.reset();
+
+            if (strg == null)
+                throw new IllegalStateException("STRG chunk not found");
+
             while (!ls.isEndOfStream()) {
                 int chunkId =  ls.readInt();
                 int chunkSize = ls.readInt();
@@ -38,10 +58,13 @@ public class StarfaitMEMIDlet extends MIDlet {
                 System.out.println(chunkId + " " + chunkSize);
                 switch (chunkId) {
                     case STRG.ID:
-                        strg = new STRG(d, ls);
+                        // STRG should have been already parsed
                         break;
                     case CODE.ID:
                         code = new CODE(rawFileSize, chunkSize, d, ls);
+                        break;
+                    case VARI.ID:
+                        vari = new VARI(d, ls, chunkSize, strg);
                         break;
                 }
                 d.reset();
