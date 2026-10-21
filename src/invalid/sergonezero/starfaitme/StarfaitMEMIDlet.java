@@ -1,5 +1,6 @@
 package invalid.sergonezero.starfaitme;
 import invalid.sergonezero.starfaitme.chunk.CODE;
+import invalid.sergonezero.starfaitme.chunk.FUNC;
 import invalid.sergonezero.starfaitme.chunk.STRG;
 import invalid.sergonezero.starfaitme.chunk.VARI;
 
@@ -18,6 +19,7 @@ public class StarfaitMEMIDlet extends MIDlet {
     private static STRG strg = null;
     private static CODE code = null;
     private static VARI vari = null;
+    private static FUNC func = null;
 
     protected void startApp() {
         InputStream is = this.getClass().getResourceAsStream("/data.win");
@@ -65,6 +67,9 @@ public class StarfaitMEMIDlet extends MIDlet {
                         break;
                     case VARI.ID:
                         vari = new VARI(d, ls, chunkSize, strg);
+                        break;
+                    case FUNC.ID:
+                        func = new FUNC(d, ls, strg);
                         break;
                 }
                 d.reset();

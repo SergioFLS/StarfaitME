@@ -19,7 +19,8 @@ public class STRG {
         addresses = new int[lenAddresses];
         strings = new String[lenAddresses];
         for (int i = 0; i < lenAddresses; i++) {
-            addresses[i] = ls.readInt();
+            // adding 4 because addresses in WAD don't use the string length
+            addresses[i] = ls.readInt() + 4;
         }
 
         // assuming the addresses are sorted because IDK how to seek here...
@@ -40,10 +41,10 @@ public class STRG {
         return addresses.length;
     }
 
-    public String getStringFromAddress(int offset) {
+    public String getStringFromAddress(int address) {
         int index = -1;
         for (int i = 0; i < addresses.length; i++) {
-            if (addresses[i] == offset) {
+            if (addresses[i] == address) {
                 index = i;
                 break;
             }

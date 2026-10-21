@@ -28,7 +28,7 @@ public class VARI {
         System.out.println(strg.toString());
 
         for (int i = 0; i < entriesCount; i++) {
-            int namePointer = ls.readInt() - 4; // TODO make this prettier maybe
+            int namePointer = ls.readInt();
             String name = strg.getStringFromAddress(namePointer);
             int instanceCount = ls.readInt();
             int variableId = ls.readInt();
