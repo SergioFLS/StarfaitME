@@ -199,7 +199,7 @@ public class StarfaitMEMIDlet extends MIDlet {
 
             System.out.println("function.firstAddress: " + function.firstAddress);
             // "This points to the INSTRUCTION address, NOT the operand address, which is why we do +4"
-            int operandAddress = (function.firstAddress - code.postAddressesPosition) +  4; // TODO why does original Starfait use code.postAddressesPosition?
+            int operandAddress = (function.firstAddress - code.postAddressesPosition) +  4;
             System.out.println("operandAddress: "  + operandAddress);
             for (int j = 0; j < function.occurrenceCount; j++) {
                 // goto operand
