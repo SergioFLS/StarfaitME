@@ -76,79 +76,153 @@ public class StarfaitMEMIDlet extends MIDlet {
                 d.skip(chunkSize);
                 //System.out.println("skipping " + d.skip(chunkSize) + " bytes");
             }
+
+            interpreter();
         } catch (IOException e) {
             e.printStackTrace();
         }
-
-        interpreter();
 
         Form f = new Form("StarfaitME");
         f.append("Message: " + message);
         Display.getDisplay(this).setCurrent(f);
     }
 
-    private void interpreter() {
-        if (strg == null) { throw new NullPointerException(); }
-        if (code == null) { throw new NullPointerException(); }
+    private void interpreter() throws IOException {
+        if (strg == null) throw new NullPointerException();
+        if (code == null) throw new NullPointerException();
+
+        remapReferences();
         byte[] interpretingCode = code.codes[0];
         ByteArrayInputStream bais = new ByteArrayInputStream(interpretingCode);
         LittleStream ls = new LittleStream(bais);
         Stack stack = new Stack();
 
-        try {
-            while (!ls.isEndOfStream()) {
-                int opword = ls.readInt();
-                int opcode = (opword >> 24) & 0xFF;
-                int type1 = (opword >> 16) & 0xFF;
-                short extra = (short)opword;
+        while (!ls.isEndOfStream()) {
+            int opword = ls.readInt();
+            int opcode = (opword >> 24) & 0xFF;
+            int type1 = (opword >> 16) & 0xFF;
+            short extra = (short) opword;
 
-                System.out.println(
-                    "Opcode: " + Integer.toHexString(opcode)
+            System.out.println(
+                "Opcode: " + Integer.toHexString(opcode)
                     + ", Type1: " + Integer.toHexString(type1)
                     + ", Extra: " + extra);
 
-                switch (opcode) {
-                    case 0xC0: { // PUSH
-                        if (type1 != 6)
-                            throw new IllegalStateException("Unknown type1: " + type1);
+            switch (opcode) {
+                case 0xC0: { // PUSH
+                    if (type1 != 6)
+                        throw new IllegalStateException("Unknown type1: " + type1);
 
-                        int stringIndex = ls.readInt();
-                        String stringToAdd = strg.strings[stringIndex];
-                        System.out.println("String: " + stringToAdd);
-                        stack.push(stringToAdd);
-                        break;
-                    }
-                    case 0x07: // CONV, no-op for now
-                        break;
-                    case 0xD9: { // CALL
-                        Stack arguments = new Stack();
-
-                        for (int i = 0; i < extra; i++) {
-                            arguments.push(stack.pop());
-                        }
-
-                        // not the real function index, yet
-                        // see note in real TinyGameMakerVM
-                        int functionIndex = ls.readInt();
-
-                        // assuming this is 'show_debug_message'
-                        String arg0 = (String)arguments.firstElement().toString();
-                        System.out.println("Game: " + arg0);
-                        message = arg0;
-
-                        stack.push(null);
-                        break;
-                    }
-                    case 0x9E: { // POPZ
-                        stack.pop();
-                        break;
-                    }
-                    default:
-                        throw new IllegalStateException("Unknown opcode: " + Integer.toHexString(opcode));
+                    int stringIndex = ls.readInt();
+                    String stringToAdd = strg.strings[stringIndex];
+                    System.out.println("String: " + stringToAdd);
+                    stack.push(stringToAdd);
+                    break;
                 }
+                case 0x07: // CONV, no-op for now
+                    break;
+                case 0xD9: { // CALL
+                    Stack arguments = new Stack();
+
+                    for (int i = 0; i < extra; i++) {
+                        arguments.push(stack.pop());
+                    }
+
+                    int functionIndex = ls.readInt();
+                    System.out.println("CALL function index: " + functionIndex);
+                    System.out.println(func.functions[functionIndex]);
+
+                    // assuming this is 'show_debug_message'
+                    String arg0 = (String) arguments.firstElement().toString();
+                    System.out.println("Game: " + arg0);
+                    message = arg0;
+
+                    stack.push(null);
+                    break;
+                }
+                case 0x9E: { // POPZ
+                    stack.pop();
+                    break;
+                }
+                default:
+                    throw new IllegalStateException("Unknown opcode: " + Integer.toHexString(opcode));
             }
-        } catch (IOException e) {
-            e.printStackTrace();
+        }
+    }
+
+    private void remapReferences() throws IOException {
+        // "I'm not sure WHY the YoYo Runner does this!!" SAME
+        System.out.println("remapReferences");
+        remapVariableReferences();
+        remapFunctionReferences();
+
+    }
+
+    private void remapVariableReferences() {
+        // count how many variables have an address
+        int variablesWithAddressesCount = 0;
+        for (int i = 0; i < vari.variables.length; i++) {
+            Variable variable = vari.variables[i];
+            if (variable.firstAddress != -1)
+                variablesWithAddressesCount++;
+        }
+
+        if (variablesWithAddressesCount < 1)
+            return;
+
+        throw new IllegalStateException("not implemented");
+//        Variable[] variables = new Variable[variablesWithAddressesCount];
+//
+//        {
+//            int i = 0;
+//
+//            for (int j = 0; j < vari.variables.length; j++) {
+//                Variable variable = vari.variables[j];
+//                if (variable.firstAddress == -1)
+//                    continue;
+//
+//                i++;
+//            }
+//        }
+    }
+    private void remapFunctionReferences() throws IOException {
+        byte[] patchingCode = code.codes[0];
+        ByteArrayInputStream bais = new ByteArrayInputStream(patchingCode);
+        LittleStream ls = new LittleStream(bais);
+
+        bais.mark(patchingCode.length);
+        System.out.println("patchingCode.length: " + patchingCode.length);
+        for (int i = 0; i < func.functions.length; i++) {
+            Function function = func.functions[i];
+            if (function.firstAddress == -1)
+                continue;
+
+            System.out.println("function.firstAddress: " + function.firstAddress);
+            // "This points to the INSTRUCTION address, NOT the operand address, which is why we do +4"
+            int operandAddress = (function.firstAddress - code.postAddressesPosition) +  4; // TODO why does original Starfait use code.postAddressesPosition?
+            System.out.println("operandAddress: "  + operandAddress);
+            for (int j = 0; j < function.occurrenceCount; j++) {
+                // goto operand
+                bais.reset();
+                bais.skip(operandAddress);
+                // read int
+                int operand = ls.readInt();
+                // delta = (read int) & 0x0FFFFFFF
+                int delta = operand & 0x0FFFFFFF;
+                // overwrite where the read int originally was with 'i'
+                // I don't want to bother using OutputStream lol
+                patchingCode[operandAddress]        = (byte)(i & 0xFF);
+                patchingCode[operandAddress + 1]    = (byte)((i >> 8) & 0xFF);
+                patchingCode[operandAddress + 2]    = (byte)((i >> 16) & 0xFF);
+                patchingCode[operandAddress + 3]    = (byte)((i >> 24) & 0xFF);
+                // operandAddress += delta
+
+                bais.reset();
+                bais.skip(operandAddress);
+                System.out.println("patched with " + ls.readInt());
+
+                operandAddress += delta;
+            }
         }
     }
 

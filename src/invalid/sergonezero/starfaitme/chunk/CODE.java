@@ -10,6 +10,7 @@ public class CODE {
     public static final int ID = 1162104643;
 
     public byte[][] codes;
+    public int postAddressesPosition;
 
     public CODE(int rawFileSize, int chunkSize, DataInputStream d, LittleStream ls) throws IOException {
         if (ls == null) {
@@ -31,6 +32,8 @@ public class CODE {
         for (int i = 0; i < addressesCount; i++) {
             addresses[i] = lbs.readInt();
         }
+
+        postAddressesPosition = rawPosition + 4 + (4 *  addressesCount);
 
         for (int i = 0; i < addressesCount; i++) {
             int address = addresses[i];
