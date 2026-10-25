@@ -42,7 +42,6 @@ public class CODE {
             //System.out.println("skipping " + bais.skip(rawFileSize - address) + " from " + (rawFileSize - address));
 
             int namePointer = lbs.readInt();
-            if (namePointer != 0xAD8) { throw new IllegalArgumentException("bad offset"); }
             int length = lbs.readInt();
             int localsCount = lbs.readShort() & 0xFFFF;
             int argumentsCount = lbs.readShort() & 0xFFFF;

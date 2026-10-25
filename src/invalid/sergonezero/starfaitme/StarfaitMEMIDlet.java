@@ -100,18 +100,24 @@ public class StarfaitMEMIDlet extends MIDlet {
         while (!ls.isEndOfStream()) {
             int opword = ls.readInt();
             int opcode = (opword >> 24) & 0xFF;
-            int type1 = (opword >> 16) & 0xFF;
+            int type1 = (opword >> 16) & 0xF;
+            int type2 = (opword >> 20) & 0xF;
             short extra = (short) opword;
 
             System.out.println(
                 "Opcode: " + Integer.toHexString(opcode)
                     + ", Type1: " + Integer.toHexString(type1)
+                    + ", Type2: " + Integer.toHexString(type2)
                     + ", Extra: " + extra);
 
             switch (opcode) {
                 case 0xC0: { // PUSH
-                    if (type1 != 6)
-                        throw new IllegalStateException("Unknown type1: " + type1);
+                    if (type1 == 5) { // variable
+                        int operand = ls.readInt();
+                        System.out.println("PUSH operand: " + operand);
+                        break;
+                    } else if (type1 != 6) // string
+                        throw new IllegalStateException("Unknown PUSH type1: " + type1);
 
                     int stringIndex = ls.readInt();
                     String stringToAdd = strg.strings[stringIndex];
@@ -144,6 +150,19 @@ public class StarfaitMEMIDlet extends MIDlet {
                     stack.pop();
                     break;
                 }
+                case 0x84: { // PUSH Immediate
+                    System.out.println("Immediate value: " + extra);
+                    stack.push(new Short(extra));
+                    break;
+                }
+                case 0x45: { // POP
+                    if (type1 != 5) throw new IllegalStateException("Unknown POP type1: " + type1);
+                    if (type2 != 2) throw new IllegalStateException("Unknown POP type2: " + type2);
+
+                    int operand = ls.readInt();
+                    System.out.println("operand: " +  operand);
+                    break;
+                }
                 default:
                     throw new IllegalStateException("Unknown opcode: " + Integer.toHexString(opcode));
             }
@@ -158,32 +177,91 @@ public class StarfaitMEMIDlet extends MIDlet {
 
     }
 
-    private void remapVariableReferences() {
+    private void remapVariableReferences() throws IOException {
         // count how many variables have an address
         int variablesWithAddressesCount = 0;
+        int allocatedBuiltinVariablesCount = 0;
+        int allocatedRegularVariablesCount = 0;
         for (int i = 0; i < vari.variables.length; i++) {
             Variable variable = vari.variables[i];
-            if (variable.firstAddress != -1)
+            if (variable.firstAddress != -1) {
                 variablesWithAddressesCount++;
+                if (variable.variableId == -6)
+                    allocatedBuiltinVariablesCount++;
+                else
+                    allocatedRegularVariablesCount++;
+            }
         }
 
         if (variablesWithAddressesCount < 1)
             return;
 
-        throw new IllegalStateException("not implemented");
-//        Variable[] variables = new Variable[variablesWithAddressesCount];
-//
-//        {
-//            int i = 0;
-//
-//            for (int j = 0; j < vari.variables.length; j++) {
-//                Variable variable = vari.variables[j];
-//                if (variable.firstAddress == -1)
-//                    continue;
-//
-//                i++;
-//            }
-//        }
+        byte[] patchingCode = code.codes[0];
+        ByteArrayInputStream bais = new ByteArrayInputStream(patchingCode);
+        LittleStream ls = new LittleStream(bais);
+
+        Variable[] variablesWithAddresses = new Variable[variablesWithAddressesCount];
+        int variableWithAddressIndex = 0;
+        for (int i = 0; i < vari.variables.length; i++) {
+            Variable variable = vari.variables[i];
+            if (variable.firstAddress != -1) {
+                variablesWithAddresses[variableWithAddressIndex] = variable;
+                variableWithAddressIndex++;
+            }
+        }
+
+        int allocatedBuiltinVariableIndex = 0;
+        Variable[] allocatedBuiltinVariables = new Variable[allocatedBuiltinVariablesCount];
+        int allocatedRegularVariableIndex = 0;
+        Variable[] allocatedRegularVariables = new Variable[allocatedRegularVariablesCount];
+
+        for (int i = 0; i < variablesWithAddresses.length; i++) {
+            Variable variable = variablesWithAddresses[i];
+            /* "Here's the thing:
+             *  For builtin variables, we store it sequentially, starting from 0
+             *  For regular variables, we store it sequentially, starting from REGULAR_VARIABLES_BASE
+             *  This way we can differentiate directly on the operand itself, and we can store the handlers densely"
+             */
+            int variableHandlerId;
+            if (variable.variableId == -6) {
+                int index = allocatedBuiltinVariableIndex;
+                allocatedBuiltinVariables[allocatedBuiltinVariableIndex] = variable;
+                variableHandlerId = index;
+                allocatedBuiltinVariableIndex++;
+            } else {
+                int index = allocatedRegularVariableIndex;
+                allocatedRegularVariables[allocatedRegularVariableIndex] = variable;
+                variableHandlerId = index + 100000;
+                allocatedRegularVariableIndex++;
+            }
+
+            // "This points to the INSTRUCTION address, NOT the operand address, which is why we do +4"
+            int operandAddress = (variable.firstAddress - code.postAddressesPosition) +  4;
+
+            for (int j = 0; j < variable.occurrenceCount; j++) {
+                // goto operand
+                bais.reset();
+                bais.skip(operandAddress);
+                // read int
+                int operand = ls.readInt();
+                // delta
+                int delta = operand & 0x0FFFFFFF;
+                // overwrite where the read int originally was
+                // I don't want to bother using OutputStream lol
+                int output = (operand & 0xF0000000) | (variableHandlerId & 0x0FFFFFFF);
+                patchingCode[operandAddress]        = (byte)(output & 0xFF);
+                patchingCode[operandAddress + 1]    = (byte)((output >> 8) & 0xFF);
+                patchingCode[operandAddress + 2]    = (byte)((output >> 16) & 0xFF);
+                patchingCode[operandAddress + 3]    = (byte)((output >> 24) & 0xFF);
+                // operandAddress += delta
+
+                bais.reset();
+                bais.skip(operandAddress);
+                System.out.println("patched with " + ls.readInt() + " which should be " + output);
+
+                operandAddress += delta;
+            }
+        }
     }
     private void remapFunctionReferences() throws IOException {
         byte[] patchingCode = code.codes[0];
